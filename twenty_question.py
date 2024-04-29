@@ -310,7 +310,22 @@ class TwentyQuestions:
             self._printTree(right, prefix, '`-', "No:  ")
 
 def main():
-    """DOCSTRING!"""
+    """
+    Execute the main game loop of the Twenty Questions game.
+
+    This function initializes an instance of TwentyQuestions, welcomes the player, and repeatedly allows the
+    player to play rounds of the game until they choose not to continue. After each round, the player is asked if they
+    wish to play again or if they want to save the current state of the game's decision tree to a file.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        This function does not return any value but controls the flow of the game and handles user interactions.
+    """
     game = TwentyQuestions()
     print("Welcome to 20 Questions!")
     while True:
