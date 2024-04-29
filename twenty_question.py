@@ -31,6 +31,8 @@ class TwentyQuestions:
         bool
             True if the input is an affirmative response ('y', 'yes', 'yup', 'sure'), else False.
         """
+        affirmative_responses = {'y', 'yes', 'yup', 'sure'}
+        return True if userIn.strip().lower() in affirmative_responses else False
 
     def checkIfLeaf(self, curNode):
         """
@@ -46,6 +48,8 @@ class TwentyQuestions:
         bool
             True if the node is a leaf (both children are None), else False.
         """
+        return curNode[1] is None and curNode[2] is None
+
 
     def simplePlay(self, curNode):
         """
@@ -61,6 +65,19 @@ class TwentyQuestions:
         bool
             True if the player successfully guesses the item, else False.
         """
+        if self.checkIfLeaf(curNode):
+            # It's a leaf node; guess the object
+            guess = curNode[0]
+            response = input(f"Is it {guess}? (y/n): ")
+            return self.inputChecker(response)
+        else:
+            # It's an internal node; ask the question
+            question = curNode[0]
+            response = input(f"{question} (y/n): ")
+            if self.inputChecker(response):
+                return self.simplePlay(curNode[1])  # Yes branch
+            else:
+                return self.simplePlay(curNode[2])  # No branch
 
     def createNode(self, userQuestion: str, userAnswer: str, isCorrectForQues: bool, curNode: tuple):
         """
@@ -88,6 +105,9 @@ class TwentyQuestions:
             The new node created with the user's question and answer 
             and curNode
         """
+        yes_branch = (userAnswer, None, None) if isCorrectForQues else curNode
+        no_branch = curNode if isCorrectForQues else (userAnswer, None, None)
+        return (userQuestion, yes_branch, no_branch)
 
     def playLeaf(self, curNode):
         """
@@ -120,6 +140,16 @@ class TwentyQuestions:
         aspect of the game, enabling the tree to expand with more nuanced questions and answers based on 
         player feedback.
         """
+        guess = curNode[0]
+        response = input(f"Is it {guess}? (y/n): ")
+        if self.inputChecker(response):
+            return curNode  # The guess was correct.
+        else:
+            # The guess was wrong, get correct object and new distinguishing question.
+            correct_answer = input("I was wrong. What were you thinking of? ")
+            new_question = input(f"What's a question that distinguishes a {correct_answer} from a {guess}? ")
+            answer_for_new = input(f"And what's the answer for a {correct_answer} to the question '{new_question}' (y/n)? ")
+            return self.createNode(new_question, correct_answer, self.inputChecker(answer_for_new), curNode)
 
 
     def play(self, curNode):
@@ -136,6 +166,17 @@ class TwentyQuestions:
         tuple
             The updated tree after playing from the given node.
         """
+        if self.checkIfLeaf(curNode):
+            return self.playLeaf(curNode)
+        else:
+            question = curNode[0]
+            response = input(f"{question} (y/n): ")
+            if self.inputChecker(response):
+                new_yes_branch = self.play(curNode[1])
+                return (question, new_yes_branch, curNode[2])
+            else:
+                new_no_branch = self.play(curNode[2])
+                return (question, curNode[1], new_no_branch)
 
     def playRound(self):
         """
@@ -148,6 +189,9 @@ class TwentyQuestions:
         -----
         None
         """
+        print("Let's play a round of 20 Questions!")
+        self.currentTree = self.play(self.currentTree) 
+        print("Round complete!")
 
 
     def saveTree(self, node, treeFile):
@@ -161,6 +205,14 @@ class TwentyQuestions:
         treeFile : _io.TextIOWrapper
             The file object where the tree is to be saved.
         """
+        if self.checkIfLeaf(node):
+            print("Leaf", file=treeFile)
+            print(node[0], file=treeFile)
+        else:
+            print("Internal node", file=treeFile)
+            print(node[0], file=treeFile)
+            self.saveTree(node[1], treeFile)
+            self.saveTree(node[2], treeFile)
 
     def saveGame(self, treeFileName):
         """
@@ -181,6 +233,9 @@ class TwentyQuestions:
             created or overwritten if it already exists.
 
         """
+        with open(treeFileName, 'w') as treeFile:
+            self.saveTree(self.currentTree, treeFile)
+        print(f"Game saved to {treeFileName}.")
 
 
     def loadTree(self, treeFile):
@@ -197,6 +252,15 @@ class TwentyQuestions:
         tuple
             The reconstructed binary tree.
         """
+        node_type = treeFile.readline().strip()
+        if node_type == "Leaf":
+            answer = treeFile.readline().strip()
+            return (answer, None, None)
+        elif node_type == "Internal node":
+            question = treeFile.readline().strip()
+            yes_branch = self.loadTree(treeFile)
+            no_branch = self.loadTree(treeFile)
+            return (question, yes_branch, no_branch)
 
     def loadGame(self, treeFileName):
         """
@@ -214,6 +278,14 @@ class TwentyQuestions:
             previously saved decision tree.
 
         """
+        try:
+            with open(treeFileName, 'r') as treeFile:
+                self.currentTree = self.loadTree(treeFile)
+            print(f"Game loaded from {treeFileName}.")
+        except FileNotFoundError:
+            print(f"No such file: {treeFileName}")
+        except Exception as e:
+            print(f"An error occurred while loading the game: {e}")
 
 
     def printTree(self):
@@ -239,9 +311,16 @@ class TwentyQuestions:
 
 def main():
     """DOCSTRING!"""
-    # Write the "main" function for 20 Questions here.  Although
-    # main() is traditionally placed at the top of a file, it is the
-    # last function you will write.
+    game = TwentyQuestions()
+    print("Welcome to 20 Questions!")
+    while True:
+        game.playRound()
+        if input("Would you like to play again? (y/n): ").lower() != 'y':
+            if input("Would you like to save this tree for later? (y/n): ").lower() == 'y':
+                filename = input("Please enter a file name: ")
+                game.saveGame(filename)
+            break
+    print("Thank you for playing. Goodbye!")
 
 
 if __name__ == '__main__':
